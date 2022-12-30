@@ -1,7 +1,7 @@
 {
   "name": "replugged-voicechatnotifications",
   "version": "1.0.0-beta1",
-  "description": "VoiceChat Notifications",
+  "description": "Adds TTS notifications to your current voice channel, like TeamSpeak",
   "engines": {
     "node": ">=14.0.0"
   },
@@ -27,6 +27,7 @@
     "@types/node": "^18.11.2",
     "@typescript-eslint/eslint-plugin": "^5.40.1",
     "@typescript-eslint/parser": "^5.40.1",
+    "discord-types": "^1.3.26",
     "esbuild": "^0.15.11",
     "eslint": "^8.25.0",
     "eslint-config-dmitmel": "github:dmitmel/eslint-config-dmitmel",

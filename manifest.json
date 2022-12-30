@@ -1,11 +1,11 @@
 {
   "id": "me.puyodead1.VoiceChatNotifications",
   "name": "VoiceChatNotifications",
-  "description": "VoiceChatNotifications",
+  "description": "Adds TTS notifications to your current voice channel, like TeamSpeak",
   "author": {
-    "name": "replugged",
-    "discordID": "1000992611840049192",
-    "github": "replugged-org"
+    "name": "Puyodead1",
+    "discordID": "498989696412549120",
+    "github": "Puyodead1"
   },
   "version": "1.0.0-beta1",
   "updater": {

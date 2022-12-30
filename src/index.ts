@@ -1,20 +1,74 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injector, webpack } from "replugged";
-import { ActionTypes } from "./interfaces";
+import { User } from "discord-types/general";
+import {
+  ChannelStore as ChannelStoreType,
+  GuildMemberStore as GuildMemberStoreType,
+  SelectedChannelStore,
+  UserStore,
+} from "discord-types/stores";
+import { Injector, settings, webpack } from "replugged";
+import {
+  VoiceChatNotificationsDefaultSettings,
+  VoiceChatNotificationsSettings,
+  VoiceState,
+  VoiceStateAction,
+} from "./interfaces";
+import { notify } from "./Voice";
 
 const inject = new Injector();
+let currentUser: User;
+let statesCache: Record<string, VoiceState> = {};
 
-let onVoiceStateChange: (props: unknown) => void;
-let onSelect: (props: {
-  channelId: string;
-  currentVoiceChannelId: string | null;
-  guildId: string;
-  stream: boolean;
-  type: ActionTypes;
-  video: boolean;
-}) => void;
+let onVoiceStateUpdate: (e: VoiceStateAction) => void;
+let onSelfMute: () => void;
+let onSelfDeaf: () => void;
+
+const saveStates = (states: VoiceState[]): void => {
+  statesCache = states.reduce<Record<string, VoiceState>>((acc, state) => {
+    acc[state.userId] = state;
+    return acc;
+  }, {});
+};
 
 export async function start(): Promise<void> {
+  const cfg = await settings.init<VoiceChatNotificationsSettings>(
+    "me.puyodead1.VoiceChatNotifications",
+  );
+
+  if (cfg.get("shouldResetSettings", VoiceChatNotificationsDefaultSettings.shouldResetSettings)) {
+    console.log("[VCN] Resetting settings");
+    // clear the settings
+    for (const key of Object.keys(cfg.all())) {
+      cfg.delete(key as any);
+    }
+    cfg.set("shouldReset" as any, false);
+  }
+
+  // add any new settings
+  for (const [key, value] of Object.entries(VoiceChatNotificationsDefaultSettings)) {
+    if (!cfg.has(key as any)) {
+      console.log(`[VCN] Adding new settings ${key} with value`, value);
+      cfg.set(key as any, value as any);
+    }
+  }
+
+  // update any settings that have changed
+  // for (const key of Object.keys(DefaultSettings)) {
+  //   const value = cfg.get(key);
+  //   if (value !== DefaultSettings[key]) {
+  //     console.log(`[StaffTags] Updating setting ${key} to`, DefaultSettings[key]);
+  //     cfg.set(key, DefaultSettings[key]);
+  //   }
+  // }
+
+  // remove any settings that no longer exist
+  // for (const key of Object.keys(cfg.all())) {
+  //   if (!(key in DefaultSettings)) {
+  //     console.log(`[StaffTags] Removing setting ${key} because it no longer exists`);
+  //     cfg.delete(key);
+  //   }
+  // }
+
   const Dispatcher = await webpack.waitForModule<{
     subscribe: (event: string, callback: (props: any) => void) => void;
   }>(webpack.filters.byProps("dispatch", "register"));
@@ -23,36 +77,156 @@ export async function start(): Promise<void> {
     return;
   }
 
-  const ActionTypesMod = await webpack.waitForModule(webpack.filters.byProps("VOICE_STATE_UPDATE"));
-  if (!ActionTypesMod) {
-    console.error("ActionTypesMod not found");
+  const UserStore = (await webpack.waitForModule(
+    webpack.filters.byProps("getUser"),
+  )) as unknown as UserStore;
+  if (!UserStore) {
+    console.error("UserStore not found");
     return;
   }
 
-  const ActionTypes = webpack.getExportsForProps(ActionTypesMod, [
-    "VOICE_STATE_UPDATE",
-  ]) as unknown as ActionTypes;
-  if (!ActionTypes) {
-    console.error("ActionTypes not found");
+  const SelectedChannelStoreMod = await webpack.waitForModule(
+    webpack.filters.byProps("getVoiceChannelId"),
+  );
+  if (!SelectedChannelStoreMod) {
+    console.error("SelectedChannelStoreMod not found");
     return;
   }
 
-  const getUserMod = await webpack.waitForModule(webpack.filters.byProps("getUser"));
-  if (!getUserMod) {
-    console.error("getUserMod not found");
+  const SelectedChannelStore = webpack.getExportsForProps(SelectedChannelStoreMod as any, [
+    "getVoiceChannelId",
+  ]) as unknown as SelectedChannelStore;
+
+  const ChannelStore = (await webpack.waitForModule(
+    webpack.filters.byProps("getChannel"),
+  )) as any as ChannelStoreType;
+  if (!ChannelStore) {
+    console.error("ChannelStore not found");
     return;
   }
 
-  onSelect = (props) => {
-    console.log("onSelect", props);
+  const GuildMemberStoreMod = (await webpack.waitForModule(
+    webpack.filters.byProps("getMember", "getMembers"),
+  )) as unknown as GuildMemberStoreType;
+  if (!GuildMemberStoreMod) {
+    console.error("GuildMemberStoreMod not found");
+    return;
+  }
+  const GuildMemberStore = webpack.getExportsForProps(GuildMemberStoreMod as any, [
+    "getMembers",
+  ]) as unknown as GuildMemberStoreType;
+
+  const MediaEngineStore = await webpack.waitForModule<{
+    isSelfMute: () => boolean;
+    isSelfDeaf: () => boolean;
+  }>(webpack.filters.byProps("isSelfMute"));
+  if (!GuildMemberStoreMod) {
+    console.error("GuildMemberStoreMod not found");
+    return;
+  }
+
+  currentUser = UserStore.getCurrentUser();
+
+  onVoiceStateUpdate = (e) => {
+    if (e.initial) return saveStates(e.voiceStates);
+
+    for (const { userId, channelId } of e.voiceStates) {
+      try {
+        const prevState = statesCache[userId];
+
+        if (userId === currentUser.id) {
+          // user is self
+          if (!channelId) {
+            // left channel
+            notify(
+              "leaveSelf",
+              userId,
+              prevState.channelId,
+              cfg,
+              UserStore,
+              ChannelStore,
+              GuildMemberStore,
+            );
+            saveStates(e.voiceStates);
+          } else if (!prevState) {
+            // joined channel
+            notify("joinSelf", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            saveStates(e.voiceStates);
+          } else if (channelId !== prevState.channelId) {
+            // moved channel
+            notify("moveSelf", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            saveStates(e.voiceStates);
+          }
+        } else {
+          const selectedChannelId = SelectedChannelStore.getVoiceChannelId();
+
+          // user is not in voice
+          if (!selectedChannelId) return;
+
+          if (!prevState && channelId === selectedChannelId) {
+            // user joined
+            notify("join", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            saveStates(e.voiceStates);
+          } else if (prevState && !channelId) {
+            // user left
+            notify(
+              "leave",
+              userId,
+              selectedChannelId,
+              cfg,
+              UserStore,
+              ChannelStore,
+              GuildMemberStore,
+            );
+            saveStates(e.voiceStates);
+          }
+        }
+      } catch (e) {
+        console.error("Error processing voice state change", e);
+      }
+    }
   };
 
-  onVoiceStateChange = (props) => {
-    console.log(`voiceStateChange`, props);
+  onSelfMute = () => {
+    const channelId = SelectedChannelStore.getVoiceChannelId();
+    if (!channelId) {
+      console.warn("self mute - couldnt get channel id");
+      return;
+    }
+    notify(
+      MediaEngineStore.isSelfMute() ? "mute" : "unmute",
+      currentUser.id,
+      channelId,
+      cfg,
+      UserStore,
+      ChannelStore,
+      GuildMemberStore,
+    );
   };
 
-  Dispatcher.subscribe(ActionTypes.VOICE_STATE_UPDATE, onVoiceStateChange);
-  Dispatcher.subscribe(ActionTypes.VOICE_CHANNEL_SELECT, onSelect);
+  onSelfDeaf = () => {
+    const channelId = SelectedChannelStore.getVoiceChannelId();
+    if (!channelId) {
+      console.warn("self deaf - couldnt get channel id");
+      return;
+    }
+    notify(
+      MediaEngineStore.isSelfDeaf() ? "deafen" : "undeafen",
+      currentUser.id,
+      channelId,
+      cfg,
+      UserStore,
+      ChannelStore,
+      GuildMemberStore,
+    );
+  };
+
+  Dispatcher.subscribe("VOICE_STATE_UPDATES", onVoiceStateUpdate);
+  console.log("subscribed to voice state actions");
+  Dispatcher.subscribe("AUDIO_TOGGLE_SELF_MUTE", onSelfMute);
+  console.log("subscribed to self mute actions");
+  Dispatcher.subscribe("AUDIO_TOGGLE_SELF_DEAF", onSelfDeaf);
+  console.log("subscribed to self deaf actions");
 }
 
 export async function stop(): Promise<void> {
@@ -65,16 +239,12 @@ export async function stop(): Promise<void> {
     return;
   }
 
-  const ActionTypes = (await webpack.waitForModule(
-    webpack.filters.byProps("VOICE_STATE_UPDATE"),
-  )) as unknown as ActionTypes;
-  if (!ActionTypes) {
-    console.error("ActionTypes not found");
-    return;
-  }
-
-  Dispatcher.unsubscribe(ActionTypes.VOICE_STATE_UPDATE, onVoiceStateChange);
-  Dispatcher.unsubscribe(ActionTypes.VOICE_CHANNEL_SELECT, onSelect);
+  Dispatcher.unsubscribe("VOICE_STATE_UPDATES", onVoiceStateUpdate);
+  console.log("unsubscribed to voice state actions");
+  Dispatcher.unsubscribe("AUDIO_TOGGLE_SELF_MUTE", onSelfMute);
+  console.log("unsubscribed to self mute actions");
+  Dispatcher.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", onSelfDeaf);
+  console.log("unsubscribed to self deaf actions");
 
   inject.uninjectAll();
 }
