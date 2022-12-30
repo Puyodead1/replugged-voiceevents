@@ -1,0 +1,18 @@
+{
+  "id": "me.puyodead1.VoiceChatNotifications",
+  "name": "VoiceChatNotifications",
+  "description": "VoiceChatNotifications",
+  "author": {
+    "name": "replugged",
+    "discordID": "1000992611840049192",
+    "github": "replugged-org"
+  },
+  "version": "1.0.0-beta1",
+  "updater": {
+    "type": "github",
+    "id": "Puyodead1/replugged-voicechatnotifications"
+  },
+  "license": "MIT",
+  "type": "replugged-plugin",
+  "renderer": "src/index.ts"
+}
