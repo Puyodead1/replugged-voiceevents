@@ -4,14 +4,14 @@ import { ChannelStore, GuildMemberStore, UserStore } from "discord-types/stores"
 import { SettingsManager } from "replugged/dist/renderer/apis/settings";
 import {
   NotificationType,
-  VoiceChatNotificationsDefaultSettings,
-  VoiceChatNotificationsSettings,
+  VoiceChatNotificationsDefaultSettings as VoiceEventsDefaultSettings,
+  VoiceEventsSettings,
 } from "./interfaces";
 
 export const findDefaultVoice = (): SpeechSynthesisVoice | null => {
   const voices = speechSynthesis.getVoices();
   if (voices.length === 0) {
-    console.error("No speech synthesis voices available");
+    console.error("[VoiceEvents] No speech synthesis voices available");
     return null;
   } else {
     return voices.find((voice) => voice.lang === "en-US") ?? voices[0];
@@ -19,7 +19,7 @@ export const findDefaultVoice = (): SpeechSynthesisVoice | null => {
 };
 
 export const findCurrentVoice = (
-  cfg: SettingsManager<VoiceChatNotificationsSettings>,
+  cfg: SettingsManager<VoiceEventsSettings>,
 ): SpeechSynthesisVoice | null => {
   const uri = cfg.get("voice");
   const voice = speechSynthesis.getVoices().find((voice) => voice.voiceURI === uri);
@@ -33,10 +33,7 @@ export const findCurrentVoice = (
   }
 };
 
-export const speak = (
-  message: string,
-  cfg: SettingsManager<VoiceChatNotificationsSettings>,
-): void => {
+export const speak = (message: string, cfg: SettingsManager<VoiceEventsSettings>): void => {
   const { volume, speed } = cfg.all();
 
   const voice = findCurrentVoice(cfg);
@@ -50,8 +47,8 @@ export const speak = (
   speechSynthesis.speak(utterance);
 };
 
-const processName = (name: string, cfg: SettingsManager<VoiceChatNotificationsSettings>) => {
-  return cfg.get("filterNames", VoiceChatNotificationsDefaultSettings.filterNames)
+const processName = (name: string, cfg: SettingsManager<VoiceEventsSettings>) => {
+  return cfg.get("filterNames", VoiceEventsDefaultSettings.filterNames)
     ? name
         .split("")
         .map((char) => (/[a-zA-Z0-9]/.test(char) ? char : " "))
@@ -63,7 +60,7 @@ export const notify = (
   type: NotificationType,
   userId: string,
   channelId: string,
-  cfg: SettingsManager<VoiceChatNotificationsSettings>,
+  cfg: SettingsManager<VoiceEventsSettings>,
   UserStore: UserStore,
   ChannelStore: ChannelStore,
   GuildMemberStore: GuildMemberStore,

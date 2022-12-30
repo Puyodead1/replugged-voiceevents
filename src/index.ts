@@ -8,8 +8,8 @@ import {
 } from "discord-types/stores";
 import { Injector, settings, webpack } from "replugged";
 import {
-  VoiceChatNotificationsDefaultSettings,
-  VoiceChatNotificationsSettings,
+  VoiceChatNotificationsDefaultSettings as VoiceEventsDefaultSettings,
+  VoiceEventsSettings,
   VoiceState,
   VoiceStateAction,
 } from "./interfaces";
@@ -31,12 +31,10 @@ const saveStates = (states: VoiceState[]): void => {
 };
 
 export async function start(): Promise<void> {
-  const cfg = await settings.init<VoiceChatNotificationsSettings>(
-    "me.puyodead1.VoiceChatNotifications",
-  );
+  const cfg = await settings.init<VoiceEventsSettings>("me.puyodead1.VoiceEvents");
 
-  if (cfg.get("shouldResetSettings", VoiceChatNotificationsDefaultSettings.shouldResetSettings)) {
-    console.log("[VCN] Resetting settings");
+  if (cfg.get("shouldResetSettings", VoiceEventsDefaultSettings.shouldResetSettings)) {
+    console.log("[VoiceEvents] Resetting settings");
     // clear the settings
     for (const key of Object.keys(cfg.all())) {
       cfg.delete(key as any);
@@ -45,9 +43,9 @@ export async function start(): Promise<void> {
   }
 
   // add any new settings
-  for (const [key, value] of Object.entries(VoiceChatNotificationsDefaultSettings)) {
+  for (const [key, value] of Object.entries(VoiceEventsDefaultSettings)) {
     if (!cfg.has(key as any)) {
-      console.log(`[VCN] Adding new settings ${key} with value`, value);
+      console.log(`[VoiceEvents] Adding new settings ${key} with value`, value);
       cfg.set(key as any, value as any);
     }
   }
@@ -73,7 +71,7 @@ export async function start(): Promise<void> {
     subscribe: (event: string, callback: (props: any) => void) => void;
   }>(webpack.filters.byProps("dispatch", "register"));
   if (!Dispatcher) {
-    console.error("Dispatcher not found");
+    console.error("[VoiceEvents] Dispatcher not found");
     return;
   }
 
@@ -81,7 +79,7 @@ export async function start(): Promise<void> {
     webpack.filters.byProps("getUser"),
   )) as unknown as UserStore;
   if (!UserStore) {
-    console.error("UserStore not found");
+    console.error("[VoiceEvents] UserStore not found");
     return;
   }
 
@@ -89,7 +87,7 @@ export async function start(): Promise<void> {
     webpack.filters.byProps("getVoiceChannelId"),
   );
   if (!SelectedChannelStoreMod) {
-    console.error("SelectedChannelStoreMod not found");
+    console.error("[VoiceEvents] SelectedChannelStoreMod not found");
     return;
   }
 
@@ -101,7 +99,7 @@ export async function start(): Promise<void> {
     webpack.filters.byProps("getChannel"),
   )) as any as ChannelStoreType;
   if (!ChannelStore) {
-    console.error("ChannelStore not found");
+    console.error("[VoiceEvents] ChannelStore not found");
     return;
   }
 
@@ -109,7 +107,7 @@ export async function start(): Promise<void> {
     webpack.filters.byProps("getMember", "getMembers"),
   )) as unknown as GuildMemberStoreType;
   if (!GuildMemberStoreMod) {
-    console.error("GuildMemberStoreMod not found");
+    console.error("[VoiceEvents] GuildMemberStoreMod not found");
     return;
   }
   const GuildMemberStore = webpack.getExportsForProps(GuildMemberStoreMod as any, [
@@ -121,7 +119,7 @@ export async function start(): Promise<void> {
     isSelfDeaf: () => boolean;
   }>(webpack.filters.byProps("isSelfMute"));
   if (!GuildMemberStoreMod) {
-    console.error("GuildMemberStoreMod not found");
+    console.error("[VoiceEvents] GuildMemberStoreMod not found");
     return;
   }
 
@@ -182,7 +180,7 @@ export async function start(): Promise<void> {
           }
         }
       } catch (e) {
-        console.error("Error processing voice state change", e);
+        console.error("[VoiceEvents] Error processing voice state change", e);
       }
     }
   };
@@ -190,7 +188,7 @@ export async function start(): Promise<void> {
   onSelfMute = () => {
     const channelId = SelectedChannelStore.getVoiceChannelId();
     if (!channelId) {
-      console.warn("self mute - couldnt get channel id");
+      console.warn("[VoiceEvents] self mute - couldnt get channel id");
       return;
     }
     notify(
@@ -207,7 +205,7 @@ export async function start(): Promise<void> {
   onSelfDeaf = () => {
     const channelId = SelectedChannelStore.getVoiceChannelId();
     if (!channelId) {
-      console.warn("self deaf - couldnt get channel id");
+      console.warn("[VoiceEvents] self deaf - couldnt get channel id");
       return;
     }
     notify(
@@ -222,11 +220,11 @@ export async function start(): Promise<void> {
   };
 
   Dispatcher.subscribe("VOICE_STATE_UPDATES", onVoiceStateUpdate);
-  console.log("subscribed to voice state actions");
+  console.log("[VoiceEvents] subscribed to voice state actions");
   Dispatcher.subscribe("AUDIO_TOGGLE_SELF_MUTE", onSelfMute);
-  console.log("subscribed to self mute actions");
+  console.log("[VoiceEvents] subscribed to self mute actions");
   Dispatcher.subscribe("AUDIO_TOGGLE_SELF_DEAF", onSelfDeaf);
-  console.log("subscribed to self deaf actions");
+  console.log("[VoiceEvents] subscribed to self deaf actions");
 }
 
 export async function stop(): Promise<void> {
@@ -240,11 +238,11 @@ export async function stop(): Promise<void> {
   }
 
   Dispatcher.unsubscribe("VOICE_STATE_UPDATES", onVoiceStateUpdate);
-  console.log("unsubscribed to voice state actions");
+  console.log("[VoiceEvents] unsubscribed to voice state actions");
   Dispatcher.unsubscribe("AUDIO_TOGGLE_SELF_MUTE", onSelfMute);
-  console.log("unsubscribed to self mute actions");
+  console.log("[VoiceEvents] unsubscribed to self mute actions");
   Dispatcher.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", onSelfDeaf);
-  console.log("unsubscribed to self deaf actions");
+  console.log("[VoiceEvents] unsubscribed to self deaf actions");
 
   inject.uninjectAll();
 }

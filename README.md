@@ -1,4 +1,4 @@
-# VoiceChatNotifications
+# Replugged VoiceEvents
 
 Adds TTS notifications to your current voice channel, like TeamSpeak.
 

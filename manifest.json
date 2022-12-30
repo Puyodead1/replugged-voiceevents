@@ -1,16 +1,16 @@
 {
-  "id": "me.puyodead1.VoiceChatNotifications",
-  "name": "VoiceChatNotifications",
+  "id": "me.puyodead1.VoiceEvents",
+  "name": "VoiceEvents",
   "description": "Adds TTS notifications to your current voice channel, like TeamSpeak",
   "author": {
     "name": "Puyodead1",
     "discordID": "498989696412549120",
     "github": "Puyodead1"
   },
-  "version": "1.0.0-beta1",
+  "version": "1.0.0-beta2",
   "updater": {
     "type": "github",
-    "id": "Puyodead1/replugged-voicechatnotifications"
+    "id": "Puyodead1/replugged-voiceevents"
   },
   "license": "MIT",
   "type": "replugged-plugin",

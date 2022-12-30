@@ -68,5 +68,5 @@ export const VoiceChatNotificationsDefaultSettings = {
   shouldResetSettings: false,
 };
 
-export type VoiceChatNotificationsSettings = typeof VoiceChatNotificationsDefaultSettings;
+export type VoiceEventsSettings = typeof VoiceChatNotificationsDefaultSettings;
 export type NotificationType = keyof typeof VoiceChatNotificationsDefaultSettings["notifs"];
