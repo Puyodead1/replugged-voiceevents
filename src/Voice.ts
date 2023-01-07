@@ -7,11 +7,12 @@ import {
   VoiceChatNotificationsDefaultSettings as VoiceEventsDefaultSettings,
   VoiceEventsSettings,
 } from "./interfaces";
+import { logger } from "./utils";
 
 export const findDefaultVoice = (): SpeechSynthesisVoice | null => {
   const voices = speechSynthesis.getVoices();
   if (voices.length === 0) {
-    console.error("[VoiceEvents] No speech synthesis voices available");
+    logger.error("[VoiceEvents] No speech synthesis voices available");
     return null;
   } else {
     return voices.find((voice) => voice.lang === "en-US") ?? voices[0];
@@ -26,7 +27,7 @@ export const findCurrentVoice = (
   if (voice) {
     return voice;
   } else {
-    console.warn(`Voice "${uri}" not found, reverting to default`);
+    logger.warn(`Voice "${uri}" not found, reverting to default`);
     const defaultVoice = findDefaultVoice();
     if (defaultVoice) cfg.set("voice", defaultVoice.voiceURI);
     return defaultVoice;
