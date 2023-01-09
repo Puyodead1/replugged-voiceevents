@@ -121,6 +121,10 @@ export async function start(): Promise<void> {
   currentUser = UserStore.getCurrentUser();
 
   onVoiceStateUpdate = (e) => {
+    if (!currentUser) {
+      logger.warn("Failed to get current user!");
+      return;
+    }
     if (e.initial) return saveStates(e.voiceStates);
 
     for (const { userId, channelId } of e.voiceStates) {

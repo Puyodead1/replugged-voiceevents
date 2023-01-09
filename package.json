@@ -1,6 +1,6 @@
 {
   "name": "replugged-voiceevents",
-  "version": "1.0.0-beta3",
+  "version": "1.0.0-beta4",
   "description": "Adds TTS notifications to your current voice channel, like TeamSpeak",
   "engines": {
     "node": ">=14.0.0"
