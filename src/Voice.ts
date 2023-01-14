@@ -1,6 +1,7 @@
 /* eslint-disable  */
 import { Channel, User } from "discord-types/general";
-import { ChannelStore, GuildMemberStore, UserStore } from "discord-types/stores";
+import { ChannelStore, GuildMemberStore } from "discord-types/stores";
+import { common } from "replugged";
 import { SettingsManager } from "replugged/dist/renderer/apis/settings";
 import {
   NotificationType,
@@ -8,6 +9,8 @@ import {
   VoiceEventsSettings,
 } from "./interfaces";
 import { logger } from "./utils";
+
+const { users } = common;
 
 export const findDefaultVoice = (): SpeechSynthesisVoice | null => {
   const voices = speechSynthesis.getVoices();
@@ -62,7 +65,6 @@ export const notify = (
   userId: string,
   channelId: string,
   cfg: SettingsManager<VoiceEventsSettings>,
-  UserStore: UserStore,
   ChannelStore: ChannelStore,
   GuildMemberStore: GuildMemberStore,
 ): void => {
@@ -73,7 +75,7 @@ export const notify = (
     return;
   }
 
-  const user = UserStore.getUser(userId) as User;
+  const user = users.getUser(userId) as User;
   const channel = ChannelStore.getChannel(channelId) as Channel;
 
   // check for filters

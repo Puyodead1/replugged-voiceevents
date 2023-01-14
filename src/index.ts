@@ -4,7 +4,6 @@ import {
   ChannelStore as ChannelStoreType,
   GuildMemberStore as GuildMemberStoreType,
   SelectedChannelStore,
-  UserStore,
 } from "discord-types/stores";
 import { common, Injector, settings, webpack } from "replugged";
 import {
@@ -17,7 +16,7 @@ import { logger } from "./utils";
 import { notify } from "./Voice";
 
 const inject = new Injector();
-const { fluxDispatcher } = common;
+const { fluxDispatcher, users } = common;
 
 let currentUser: User;
 let statesCache: Record<string, VoiceState> = {};
@@ -70,14 +69,6 @@ export async function start(): Promise<void> {
   //   }
   // }
 
-  const UserStore = (await webpack.waitForModule(
-    webpack.filters.byProps("getUser"),
-  )) as unknown as UserStore;
-  if (!UserStore) {
-    console.error("UserStore not found");
-    return;
-  }
-
   const ChannelStore = (await webpack.waitForModule(
     webpack.filters.byProps("getChannel"),
   )) as any as ChannelStoreType;
@@ -118,7 +109,7 @@ export async function start(): Promise<void> {
     return;
   }
 
-  currentUser = UserStore.getCurrentUser();
+  currentUser = users.getCurrentUser();
 
   onVoiceStateUpdate = (e) => {
     if (!currentUser) {
@@ -140,18 +131,18 @@ export async function start(): Promise<void> {
               userId,
               prevState.channelId,
               cfg,
-              UserStore,
+
               ChannelStore,
               GuildMemberStore,
             );
             saveStates(e.voiceStates);
           } else if (!prevState) {
             // joined channel
-            notify("joinSelf", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            notify("joinSelf", userId, channelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
           } else if (channelId !== prevState.channelId) {
             // moved channel
-            notify("moveSelf", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            notify("moveSelf", userId, channelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
           }
         } else {
@@ -162,7 +153,7 @@ export async function start(): Promise<void> {
 
           if (!prevState && channelId === selectedChannelId) {
             // user joined
-            notify("join", userId, channelId, cfg, UserStore, ChannelStore, GuildMemberStore);
+            notify("join", userId, channelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
           } else if (prevState && !channelId) {
             // user left
@@ -171,7 +162,7 @@ export async function start(): Promise<void> {
               userId,
               selectedChannelId,
               cfg,
-              UserStore,
+
               ChannelStore,
               GuildMemberStore,
             );
@@ -195,7 +186,6 @@ export async function start(): Promise<void> {
       currentUser.id,
       channelId,
       cfg,
-      UserStore,
       ChannelStore,
       GuildMemberStore,
     );
@@ -212,7 +202,6 @@ export async function start(): Promise<void> {
       currentUser.id,
       channelId,
       cfg,
-      UserStore,
       ChannelStore,
       GuildMemberStore,
     );
