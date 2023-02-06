@@ -5,7 +5,7 @@ import {
   GuildMemberStore as GuildMemberStoreType,
   SelectedChannelStore,
 } from "discord-types/stores";
-import { common, Injector, settings, webpack } from "replugged";
+import { Injector, common, settings, webpack } from "replugged";
 import {
   VoiceChatNotificationsDefaultSettings as VoiceEventsDefaultSettings,
   VoiceEventsSettings,
