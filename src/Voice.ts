@@ -9,6 +9,7 @@ import {
   VoiceEventsSettings,
 } from "./interfaces";
 import { logger } from "./utils";
+import { cfg } from ".";
 
 const { users } = common;
 
@@ -22,9 +23,7 @@ export const findDefaultVoice = (): SpeechSynthesisVoice | null => {
   }
 };
 
-export const findCurrentVoice = (
-  cfg: SettingsManager<VoiceEventsSettings>,
-): SpeechSynthesisVoice | null => {
+export const findCurrentVoice = (): SpeechSynthesisVoice | null => {
   const uri = cfg.get("voice");
   const voice = speechSynthesis.getVoices().find((voice) => voice.voiceURI === uri);
   if (voice) {
@@ -37,10 +36,14 @@ export const findCurrentVoice = (
   }
 };
 
-export const speak = (message: string, cfg: SettingsManager<VoiceEventsSettings>): void => {
+export const findCurrentVoiceURI = (): string | undefined => {
+  return findCurrentVoice()?.voiceURI;
+};
+
+export const speak = (message: string): void => {
   const { volume, speed } = cfg.all();
 
-  const voice = findCurrentVoice(cfg);
+  const voice = findCurrentVoice();
   if (!voice) return;
 
   const utterance = new SpeechSynthesisUtterance(message);
@@ -51,7 +54,10 @@ export const speak = (message: string, cfg: SettingsManager<VoiceEventsSettings>
   speechSynthesis.speak(utterance);
 };
 
-const processName = (name: string, cfg: SettingsManager<VoiceEventsSettings>) => {
+const processName = (
+  name: string,
+  cfg: SettingsManager<VoiceEventsSettings, keyof VoiceEventsSettings>,
+) => {
   return cfg.get("filterNames", VoiceEventsDefaultSettings.filterNames)
     ? name
         .split("")
@@ -64,14 +70,14 @@ export const notify = (
   type: NotificationType,
   userId: string,
   channelId: string,
-  cfg: SettingsManager<VoiceEventsSettings>,
+  cfg: SettingsManager<VoiceEventsSettings, keyof VoiceEventsSettings>,
   ChannelStore: ChannelStore,
   GuildMemberStore: GuildMemberStore,
 ): void => {
   const settings = cfg.all();
 
   // check for enabled
-  if (!settings.notifs[type].enabled) {
+  if (!settings.notifications[type].enabled) {
     return;
   }
 
@@ -93,13 +99,12 @@ export const notify = (
 
   // speak message
   speak(
-    settings.notifs[type].message
+    settings.notifications[type].message
       .split("$username")
       .join(processName(user.username, cfg))
-      .split("$user")
+      .split("$nickname")
       .join(processName(nick, cfg))
       .split("$channel")
       .join(processName(channelName, cfg)),
-    cfg,
   );
 };

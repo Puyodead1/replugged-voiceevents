@@ -12,7 +12,7 @@ import {
   VoiceState,
   VoiceStateAction,
 } from "./interfaces";
-import { logger } from "./utils";
+import { logger, resetSettings } from "./utils";
 import { notify } from "./Voice";
 
 const inject = new Injector();
@@ -32,16 +32,13 @@ const saveStates = (states: VoiceState[]): void => {
   }, {});
 };
 
-export async function start(): Promise<void> {
-  const cfg = await settings.init<VoiceEventsSettings>("me.puyodead1.VoiceEvents");
+export const cfg = await settings.init<VoiceEventsSettings>("me.puyodead1.VoiceEvents");
 
+export async function start(): Promise<void> {
   if (cfg.get("shouldResetSettings", VoiceEventsDefaultSettings.shouldResetSettings)) {
     logger.log("Resetting settings");
-    // clear the settings
-    for (const key of Object.keys(cfg.all())) {
-      cfg.delete(key as any);
-    }
-    cfg.set("shouldReset" as any, false);
+
+    resetSettings();
   }
 
   // add any new settings
@@ -85,9 +82,10 @@ export async function start(): Promise<void> {
     return;
   }
 
-  const SelectedChannelStore = webpack.getExportsForProps(SelectedChannelStoreMod as any, [
-    "getVoiceChannelId",
-  ]) as unknown as SelectedChannelStore;
+  const SelectedChannelStore = webpack.getExportsForProps<SelectedChannelStore>(
+    SelectedChannelStoreMod,
+    ["getVoiceChannelId"],
+  )!;
 
   const GuildMemberStoreMod = await webpack.waitForModule(
     webpack.filters.byProps("getMember", "getMembers"),
@@ -96,9 +94,9 @@ export async function start(): Promise<void> {
     logger.error("GuildMemberStoreMod not found");
     return;
   }
-  const GuildMemberStore = webpack.getExportsForProps(GuildMemberStoreMod, [
+  const GuildMemberStore = webpack.getExportsForProps<GuildMemberStoreType>(GuildMemberStoreMod, [
     "getMembers",
-  ]) as unknown as GuildMemberStoreType;
+  ])!;
 
   const MediaEngineStore = await webpack.waitForModule<{
     isSelfMute: () => boolean;
@@ -124,19 +122,12 @@ export async function start(): Promise<void> {
 
         if (userId === currentUser.id) {
           // user is self
+          console.log(prevState);
           if (!channelId) {
             // left channel
-            notify(
-              "leaveSelf",
-              userId,
-              prevState.channelId,
-              cfg,
-
-              ChannelStore,
-              GuildMemberStore,
-            );
+            notify("leaveSelf", userId, prevState.channelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
-          } else if (!prevState) {
+          } else if (!prevState || !prevState.channelId) {
             // joined channel
             notify("joinSelf", userId, channelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
@@ -157,15 +148,7 @@ export async function start(): Promise<void> {
             saveStates(e.voiceStates);
           } else if (prevState && !channelId) {
             // user left
-            notify(
-              "leave",
-              userId,
-              selectedChannelId,
-              cfg,
-
-              ChannelStore,
-              GuildMemberStore,
-            );
+            notify("leave", userId, selectedChannelId, cfg, ChannelStore, GuildMemberStore);
             saveStates(e.voiceStates);
           }
         }
@@ -225,3 +208,5 @@ export function stop(): void {
 
   inject.uninjectAll();
 }
+
+export { Settings } from "./Components/Settings";

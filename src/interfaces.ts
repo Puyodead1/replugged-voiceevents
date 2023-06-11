@@ -26,7 +26,7 @@ export const VoiceChatNotificationsDefaultSettings = {
   filterNames: true,
   filterBots: false,
   filterStages: true,
-  notifs: {
+  notifications: {
     mute: {
       enabled: true,
       message: "Muted",
@@ -45,11 +45,11 @@ export const VoiceChatNotificationsDefaultSettings = {
     },
     join: {
       enabled: true,
-      message: "$user joined your channel",
+      message: "$nickname joined your channel",
     },
     leave: {
       enabled: true,
-      message: "$user left your channel",
+      message: "$nickname left your channel",
     },
     joinSelf: {
       enabled: true,
@@ -69,4 +69,5 @@ export const VoiceChatNotificationsDefaultSettings = {
 };
 
 export type VoiceEventsSettings = typeof VoiceChatNotificationsDefaultSettings;
-export type NotificationType = keyof typeof VoiceChatNotificationsDefaultSettings["notifs"];
+export type NotificationType =
+  keyof (typeof VoiceChatNotificationsDefaultSettings)["notifications"];

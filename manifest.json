@@ -7,10 +7,10 @@
     "discordID": "498989696412549120",
     "github": "Puyodead1"
   },
-  "version": "1.0.0-beta6",
+  "version": "1.1.0",
   "updater": {
-    "type": "github",
-    "id": "Puyodead1/replugged-voiceevents"
+    "type": "store",
+    "id": "me.puyodead1.VoiceEvents"
   },
   "license": "MIT",
   "type": "replugged-plugin",
